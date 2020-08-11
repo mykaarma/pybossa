@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with PYBOSSA.  If not, see <http://www.gnu.org/licenses/>.
 """Home view for PYBOSSA."""
-from flask import current_app, abort
+from flask import current_app, abort, redirect, url_for
 from flask_login import current_user
 from pybossa.model.category import Category
 from flask import Blueprint
@@ -49,8 +49,11 @@ def home():
         user_id = current_user.id
         historical_projects = cached_users.projects_contributed(user_id, order_by='last_contribution')[:3]
         data['historical_contributions'] = historical_projects
+        rank_and_score = cached_users.rank_and_score(user_id)
+        current_user.rank = rank_and_score['rank']
     response = dict(template='/home/index.html', **data)
-    return handle_content_type(response)
+    #return handle_content_type(response)
+    return redirect('/project/category/mkplaygames', code=302)
 
 
 @blueprint.route("about")

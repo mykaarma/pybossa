@@ -30,6 +30,8 @@ def index(window=0):
     """Get the last activity from users and projects."""
     if current_user.is_authenticated:
         user_id = current_user.id
+        rank_and_score = cached_users.rank_and_score(user_id)
+        current_user.rank = rank_and_score['rank']
     else:
         user_id = None
 
@@ -43,6 +45,11 @@ def index(window=0):
     if info is not None:
         if leaderboards is None or info not in leaderboards:
             return abort(404)
+        underscore = info.find("_")    
+        answer = info[underscore+1:]
+        dept = info[:underscore]
+        if(current_user.info is None or current_user.info['container'] is None or current_user.info['container'].get(dept) is None or current_user.info['container'][dept] != answer):
+            return abort(401)
 
     top_users = cached_users.get_leaderboard(current_app.config['LEADERBOARD'],
                                              user_id=user_id,

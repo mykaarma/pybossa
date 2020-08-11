@@ -16,7 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with PYBOSSA.  If not, see <http://www.gnu.org/licenses/>.
 from flask_oauthlib.client import OAuth
+from flask_saml2.utils import certificate_from_file, private_key_from_file
+from pathlib import Path
 
+KEY_DIR = Path(__file__).parent.parent / 'keys' / 'sample'
+CERTIFICATE_FILE = KEY_DIR / 'certificate.pem'
+PRIVATE_KEY_FILE = KEY_DIR / 'private-key.pem'
 
 class Twitter(object):
 
@@ -85,6 +90,41 @@ class Google(object):
             access_token_method='POST',
             consumer_key=app.config['GOOGLE_CLIENT_ID'],
             consumer_secret=app.config['GOOGLE_CLIENT_SECRET'])
+
+class Mykaarma(object):
+
+    """Class Google to enable Google signin."""
+
+    def __init__(self, app=None):
+        """Init method."""
+        self.app = app
+        if app is not None:  # pragma: no cover
+            self.init_app(app)
+
+    def init_app(self, app):
+        """Init app using factories pattern."""
+        CERTIFICATE = certificate_from_file(CERTIFICATE_FILE)
+        PRIVATE_KEY = private_key_from_file(PRIVATE_KEY_FILE)
+        app.config['SAML2_IDENTITY_PROVIDERS'] = [
+            {
+                'CLASS': 'flask_saml2.sp.idphandler.IdPHandler',
+                'OPTIONS': {
+                    'display_name': 'mkplay',
+                    'entity_id': app.config['ENTITY_ID'],
+                    'sso_url': app.config['SSO_URL'],
+                    'slo_url': app.config['SLO_URL'],
+                    'certificate':app.config['CERTIFICATE']
+                },
+            },
+        ]
+        
+        app.config['SAML2_SP'] = {
+
+            'certificate': CERTIFICATE,
+            'private_key': PRIVATE_KEY,
+
+        }
+        
 
 class Flickr(object):
 

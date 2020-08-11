@@ -24,6 +24,8 @@ from flask import Flask, url_for, request, render_template, \
 from flask_login import current_user
 from flask_babel import gettext
 from flask_assets import Bundle
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 from flask_json_multidict import get_json_multidict
 from pybossa import default_settings as settings
 from pybossa.extensions import *
@@ -39,6 +41,7 @@ from pybossa import util
 def create_app(run_as_server=True):
     """Create web app."""
     app = Flask(__name__)
+    app.wsgi_app = ProxyFix(app.wsgi_app)
     configure_app(app)
     setup_assets(app)
     setup_cache_timeouts(app)
@@ -198,6 +201,7 @@ def setup_repositories(app):
     from pybossa.repositories import AnnouncementRepository
     from pybossa.repositories import BlogRepository
     from pybossa.repositories import TaskRepository
+    from pybossa.repositories import FlaggedTaskRepository
     from pybossa.repositories import AuditlogRepository
     from pybossa.repositories import WebhookRepository
     from pybossa.repositories import ResultRepository
@@ -209,6 +213,7 @@ def setup_repositories(app):
     global announcement_repo
     global blog_repo
     global task_repo
+    global flagged_task_repo
     global auditlog_repo
     global webhook_repo
     global result_repo
@@ -221,6 +226,7 @@ def setup_repositories(app):
     announcement_repo = AnnouncementRepository(db)
     blog_repo = BlogRepository(db)
     task_repo = TaskRepository(db, language)
+    flagged_task_repo = FlaggedTaskRepository(db)
     auditlog_repo = AuditlogRepository(db)
     webhook_repo = WebhookRepository(db)
     result_repo = ResultRepository(db)
@@ -326,7 +332,7 @@ def setup_blueprints(app):
 
     # from rq_dashboard import RQDashboard
     import rq_dashboard
-    app.config.from_object(rq_dashboard.default_settings)
+    #app.config.from_object(rq_dashboard.default_settings)
     rq_dashboard.blueprint.before_request(is_admin)
     app.register_blueprint(rq_dashboard.blueprint, url_prefix="/admin/rq",
                            redis_conn=sentinel.master)
@@ -345,6 +351,7 @@ def setup_external_services(app):
     setup_twitter_login(app)
     setup_facebook_login(app)
     setup_google_login(app)
+    setup_mykaarma_login(app)
     setup_flickr_importer(app)
     setup_dropbox_importer(app)
     setup_twitter_importer(app)
@@ -398,6 +405,21 @@ def setup_google_login(app):
         print(inst)
         print("Google signin disabled")
         log_message = 'Google signin disabled: %s' % str(inst)
+        app.logger.info(log_message)
+
+def setup_mykaarma_login(app):
+    try:  # pragma: no cover
+        if (app.config['MYKAARMA_LOGIN']
+                and app.config.get('LDAP_HOST') is None):
+            mykaarma.init_app(app)
+            from pybossa.view.mykaarma import blueprint as mykaarma_bp
+            app.register_blueprint(mykaarma_bp, url_prefix='/saml')
+    except Exception as inst:  # pragma: no cover
+        print(type(inst))
+        print(inst.args)
+        print(inst)
+        print("mykaarma signin disabled")
+        log_message = 'MyKaarma signin disabled: %s' % str(inst)
         app.logger.info(log_message)
 
 
@@ -711,7 +733,6 @@ def setup_scheduled_jobs(app):  # pragma: no cover
             dict(name=enqueue_periodic_jobs, args=['quaterly'], kwargs={},
                  interval=(3 * MONTH), timeout=(30 * MINUTE),
                  scheduled_time=first_quaterly_execution)]
-
     for job in JOBS:
         schedule_job(job, scheduler)
 

@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with PYBOSSA.  If not, see <http://www.gnu.org/licenses/>.
 
-from redis import sentinel, StrictRedis
+from redis import sentinel, StrictRedis, Redis
 
 
 class Sentinel(object):
@@ -31,10 +31,17 @@ class Sentinel(object):
     def init_app(self, app):
         socket_timeout = app.config.get('REDIS_SOCKET_TIMEOUT', None)
         retry_on_timeout = app.config.get('REDIS_RETRY_ON_TIMEOUT', True)
-        self.connection = sentinel.Sentinel(app.config['REDIS_SENTINEL'],
-                                            socket_timeout=socket_timeout,
-                                            retry_on_timeout=retry_on_timeout)
-        redis_db = app.config.get('REDIS_DB') or 0
-        redis_master = app.config.get('REDIS_MASTER') or 'mymaster'
-        self.master = self.connection.master_for(redis_master, db=redis_db)
-        self.slave = self.connection.slave_for(redis_master, db=redis_db)
+        
+        if(app.config.get('REDIS_MODE')=='master'):
+            self.master = StrictRedis(db=0,host=app.config.get('REDIS_MK_MASTER'),port=app.config.get('REDIS_PORT'),password=app.config.get('REDIS_PASSWORD'),ssl=app.config.get('REDIS_SSL'),socket_timeout=socket_timeout,retry_on_timeout=retry_on_timeout)
+            self.slave = StrictRedis(db=0,host=app.config.get('REDIS_MK_SLAVE'),port=app.config.get('REDIS_PORT'),password=app.config.get('REDIS_PASSWORD'),ssl=app.config.get('REDIS_SSL'),socket_timeout=socket_timeout,retry_on_timeout=retry_on_timeout)
+
+        else:
+            
+            self.connection = sentinel.Sentinel(app.config['REDIS_SENTINEL'],
+                                                socket_timeout=socket_timeout,
+                                                retry_on_timeout=retry_on_timeout)
+            redis_db = app.config.get('REDIS_DB') or 0
+            redis_master = app.config.get('REDIS_MASTER') or 'mymaster'
+            self.master = self.connection.master_for(redis_master, db=redis_db)
+            self.slave = self.connection.slave_for(redis_master, db=redis_db)

@@ -46,6 +46,7 @@ from pybossa.core import page_repo, helping_repo
 from pybossa.core import project_stats_repo
 from pybossa.model import DomainObject, announcement
 from pybossa.model.task import Task
+from pybossa.model.task_run import TaskRun	
 from pybossa.cache.projects import clean_project
 from pybossa.cache.users import delete_user_summary_id
 from pybossa.cache.categories import reset
@@ -100,7 +101,8 @@ class APIBase(MethodView):
                               'helpingmaterial',
                               'announcement',
                               'taskrun',
-                              'page']
+                              'page',
+                              'task']
 
     def refresh_cache(self, cls_name, oid):
         """Refresh the cache."""
@@ -135,10 +137,12 @@ class APIBase(MethodView):
         """
         try:
             ensure_authorized_to('read', self.__class__)
-            query = self._db_query(oid)
-            json_response = self._create_json_response(query, oid)
-            return Response(json_response, mimetype='application/json')
+            if(current_app.config.get('RESTRICT_API') is False or (current_user.admin)):
+                query = self._db_query(oid)
+                json_response = self._create_json_response(query, oid)
+                return Response(json_response, mimetype='application/json')   
         except Exception as e:
+            raise Forbidden
             return error.format_exception(
                 e,
                 target=self.__class__.__name__.lower(),
@@ -244,19 +248,22 @@ class APIBase(MethodView):
     def api_context(self, all_arg, **filters):
         if current_user.is_authenticated:
             filters['owner_id'] = current_user.id
-        if filters.get('owner_id') and all_arg == '1':
+        # if filters.get('owner_id') and all_arg == '1':
+        if filters.get('owner_id'):
             del filters['owner_id']
         return filters
 
     def _filter_query(self, repo_info, limit, offset, orderby):
         filters = {}
         for k in list(request.args.keys()):
-            if k not in ['limit', 'offset', 'api_key', 'last_id', 'all',
+            # if k not in ['limit', 'offset', 'api_key', 'last_id', 'all',
+            #              'fulltextsearch', 'desc', 'orderby', 'related',
+            #              'participated', 'full', 'stats']:
+            if k not in ['limit', 'offset', 'last_id', 'all',
                          'fulltextsearch', 'desc', 'orderby', 'related',
                          'participated', 'full', 'stats']:
-                # Raise an error if the k arg is not a column
-                if self.__class__ == Task and k == 'external_uid':
-                    pass
+                if (self.__class__ == Task or self.__class__ == TaskRun) and (k == 'external_uid' or k=='api_key'):
+                    continue
                 else:
                     getattr(self.__class__, k)
                 filters[k] = request.args[k]
@@ -312,7 +319,7 @@ class APIBase(MethodView):
         try:
             cls_name = self.__class__.__name__
             data = None
-            self.valid_args()
+            self.valid_args()            
             data = self._file_upload(request)
             if data is None:
                 data = json.loads(request.data)
@@ -320,7 +327,8 @@ class APIBase(MethodView):
             inst = self._create_instance_from_request(data)
             repo = repos[self.__class__.__name__]['repo']
             save_func = repos[self.__class__.__name__]['save']
-            getattr(repo, save_func)(inst)
+            if ( not str(type(self)) == "<class 'pybossa.api.mk_tasks.mkTaskAPI'>"):
+                getattr(repo, save_func)(inst)
             self._log_changes(None, inst)
             self.refresh_cache(cls_name, inst.id)
             json_response = json.dumps(inst.dictize())
@@ -435,9 +443,10 @@ class APIBase(MethodView):
         for key in data:
             setattr(existing, key, data[key])
         if new_upload:
-            existing.media_url = new_upload['media_url']
             existing.info['container'] = new_upload['info']['container']
-            existing.info['file_name'] = new_upload['info']['file_name']
+            if(new_upload['media_url']):
+                existing.info['file_name'] = new_upload['info']['file_name']
+                existing.media_url = new_upload['media_url']
         self._update_attribute(existing, old)
         update_func = repos[self.__class__.__name__]['update']
         self._validate_instance(existing)
@@ -485,6 +494,7 @@ class APIBase(MethodView):
         """Method to be overriden by inheriting classes for logging purposes"""
         pass
 
+    
     def _forbidden_attributes(self, data):
         """Method to be overriden by inheriting classes that will not allow for
         certain fields to be used in PUT or POST requests"""
