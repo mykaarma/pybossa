@@ -162,6 +162,17 @@ class BulkTaskCSVImportForm(Form):
     def get_import_data(self):
         return {'type': 'csv', 'csv_url': self.csv_url.data}
 
+class BulkTaskJSONImportForm(Form):
+    form_name = TextField(label=None, widget=HiddenInput(), default='json')
+    msg_required = lazy_gettext("You must provide the JSON data")
+    msg_json = lazy_gettext("Oops! That's not valid JSON data. "
+                           "You must provide valid JSON data")
+    json_data = TextField(lazy_gettext('JSON Data'),
+                        [validators.Required(message=msg_required),
+                         validators.URL(message=msg_json)])
+
+    def get_import_data(self):
+        return {'type': 'json', 'json_data': self.json_data.data}
 
 class BulkTaskGDImportForm(Form):
     form_name = TextField(label=None, widget=HiddenInput(), default='gdocs')
@@ -322,7 +333,8 @@ class GenericBulkTaskImportForm(object):
         's3': BulkTaskS3ImportForm,
         'youtube': BulkTaskYoutubeImportForm,
         'localCSV': BulkTaskLocalCSVImportForm,
-        'iiif': BulkTaskIIIFImportForm
+        'iiif': BulkTaskIIIFImportForm,
+        'json': BulkTaskJSONImportForm
     }
 
     def __call__(self, form_name, *form_args, **form_kwargs):

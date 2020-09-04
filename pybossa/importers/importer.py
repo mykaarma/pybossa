@@ -20,6 +20,7 @@ from flask_babel import gettext
 from .csv import BulkTaskCSVImport, BulkTaskGDImport, BulkTaskLocalCSVImport
 from .dropbox import BulkTaskDropboxImport
 from .flickr import BulkTaskFlickrImport
+from .json import BulkTaskJSONImport
 from .twitterapi import BulkTaskTwitterImport
 from .youtubeapi import BulkTaskYoutubeImport
 from .epicollect import BulkTaskEpiCollectPlusImport
@@ -38,7 +39,8 @@ class Importer(object):
                                epicollect=BulkTaskEpiCollectPlusImport,
                                s3=BulkTaskS3Import,
                                localCSV=BulkTaskLocalCSVImport,
-                               iiif=BulkTaskIIIFImporter)
+                               iiif=BulkTaskIIIFImporter,
+                               json=BulkTaskJSONImport)
         self._importer_constructor_params = dict()
 
     def register_flickr_importer(self, flickr_params):
@@ -102,7 +104,7 @@ class Importer(object):
 
     def get_autoimporter_names(self):
         """Get autoimporter names."""
-        no_autoimporters = ('dropbox', 's3')
+        no_autoimporters = ('dropbox', 's3', 'json')
         return [name for name in self._importers.keys() if name not in no_autoimporters]
 
 
