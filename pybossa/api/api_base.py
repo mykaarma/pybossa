@@ -50,6 +50,8 @@ from pybossa.model.task_run import TaskRun
 from pybossa.cache.projects import clean_project
 from pybossa.cache.users import delete_user_summary_id
 from pybossa.cache.categories import reset
+from pybossa.accessControl import authority_check_admin	
+
 
 repos = {'Task': {'repo': task_repo, 'filter': 'filter_tasks_by',
                   'get': 'get_task', 'save': 'save', 'update': 'update',
@@ -136,11 +138,14 @@ class APIBase(MethodView):
 
         """
         try:
+            if((request.path == '/api/task' or request.path.find('api/task?project_id')!=-1) and not authority_check_admin(current_user.id,'admin')):	
+                raise abort(403)	
+            if(request.path.find('/api/taskrun')!=-1 and not authority_check_admin(current_user.id,'admin')):	
+                raise abort(403)
             ensure_authorized_to('read', self.__class__)
-            if(current_app.config.get('RESTRICT_API') is False or (current_user.admin)):
-                query = self._db_query(oid)
-                json_response = self._create_json_response(query, oid)
-                return Response(json_response, mimetype='application/json')   
+            query = self._db_query(oid)
+            json_response = self._create_json_response(query, oid)
+            return Response(json_response, mimetype='application/json')   
         except Exception as e:
             raise Forbidden
             return error.format_exception(
