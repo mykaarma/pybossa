@@ -70,7 +70,6 @@ from pybossa.auditlogger import AuditLogger
 from pybossa.contributions_guard import ContributionsGuard
 from pybossa.default_settings import TIMEOUT
 from pybossa.exporter.csv_reports_export import ProjectReportCsvExporter
-from pybossa.accessControl import authority_check	
 
 blueprint = Blueprint('project', __name__)
 
@@ -216,22 +215,11 @@ def project_index(page, lookup, category, fallback, use_count, order_by=None,
 
     if current_app.config.get('HISTORICAL_CONTRIBUTIONS_AS_CATEGORY'):
         categories.insert(0, historical_contributions_cat)
-
     # Check if we have to add the section Featured to local nav
     if cached_projects.n_count('featured') > 0:
         categories.insert(0, featured_cat)
-
-    authorized_projects=[]
-    if current_user.is_authenticated:
-        for i in range(len(projects)):
-            if(authority_check(current_user.id,projects[i]["id"],'project','read')):
-                authorized_projects.append(projects[i])
-    else:
-        raise abort(403)
-    
-
     template_args = {
-        "projects": authorized_projects,
+        "projects": projects,
         "title": gettext("Projects"),
         "pagination": pagination,
         "active_cat": active_cat,
@@ -829,11 +817,6 @@ def password_required(short_name):
 @blueprint.route('/<short_name>/task/<int:task_id>')
 def task_presenter(short_name, task_id):
     project, owner, ps = project_by_shortname(short_name)
-    if current_user.is_authenticated:	
-        if(not authority_check(current_user.id,project.id,'project','read')):	
-            raise abort(403)    	
-    else:	
-        raise abort(403)
     task = task_repo.get_task(id=task_id)
     if task is None:
         raise abort(404)
@@ -890,25 +873,15 @@ def task_presenter(short_name, task_id):
 @blueprint.route('/<short_name>/presenter')
 @blueprint.route('/<short_name>/newtask')
 def presenter(short_name):
-    if current_user.is_authenticated:	
-        project = project_repo.get_by_shortname(short_name)	
-        if(not authority_check(current_user.id,project.id,'project','read')):	
-            raise abort(403)    	
-    else:	
-        raise abort(403)
+
     def invite_new_volunteers(project, ps):
         user_id = None if current_user.is_anonymous else current_user.id
         user_ip = (anonymizer.ip(request.remote_addr or '127.0.0.1')
                    if current_user.is_anonymous else None)
-        if current_user.is_authenticated:	
-            user_id = current_user.id	
-            rank_and_score = cached_users.rank_and_score(user_id)	
-            current_user.rank = rank_and_score['rank']
         task = sched.new_task(project.id,
                               project.info.get('sched'),
                               user_id, user_ip, 0)
         return task == [] and ps.overall_progress < 100.0
-    
 
     def respond(tmpl):
         if (current_user.is_anonymous):
@@ -978,14 +951,10 @@ def tutorial(short_name):
 
 @blueprint.route('/<short_name>/<int:task_id>/results.json')
 def export(short_name, task_id):
-    #restrict export
     """Return a file with all the TaskRuns for a given Task"""
     # Check if the project exists
     project, owner, ps = project_by_shortname(short_name)
-    if current_user.is_authenticated:	
-        user_id = current_user.id	
-        rank_and_score = cached_users.rank_and_score(user_id)	
-        current_user.rank = rank_and_score['rank']
+
     if project.needs_password():
         redirect_to_password = _check_if_redirect_to_password(project)
         if redirect_to_password:
@@ -1005,13 +974,9 @@ def export(short_name, task_id):
 
 @blueprint.route('/<short_name>/tasks/')
 def tasks(short_name):
-    #restrict access
     project, owner, ps = project_by_shortname(short_name)
     title = project_title(project, "Tasks")
-    if current_user.is_authenticated:	
-        user_id = current_user.id	
-        rank_and_score = cached_users.rank_and_score(user_id)	
-        current_user.rank = rank_and_score['rank']
+
     if project.needs_password():
         redirect_to_password = _check_if_redirect_to_password(project)
         if redirect_to_password:
@@ -1047,14 +1012,10 @@ def tasks(short_name):
 @blueprint.route('/<short_name>/tasks/browse')
 @blueprint.route('/<short_name>/tasks/browse/<int:page>')
 def tasks_browse(short_name, page=1):
-    #restrict access
     project, owner, ps = project_by_shortname(short_name)
     title = project_title(project, "Tasks")
     pro = pro_features()
-    if current_user.is_authenticated:	
-        user_id = current_user.id	
-        rank_and_score = cached_users.rank_and_score(user_id)	
-        current_user.rank = rank_and_score['rank']
+
     def respond():
         per_page = 10
         offset = (page - 1) * per_page
@@ -1136,7 +1097,6 @@ def delete_tasks(short_name):
 
 @blueprint.route('/<short_name>/tasks/export')
 def export_to(short_name):
-    #export access restriction
     """Export Tasks and TaskRuns in the given format"""
     project, owner, ps = project_by_shortname(short_name)
     supported_tables = ['task', 'task_run', 'result']
@@ -2068,7 +2028,7 @@ def del_coowner(short_name, user_name=None):
 @login_required
 def export_project_report(short_name):
     """Export individual project information in the given format"""
-#check for project export restriction
+
     project, owner, ps = project_by_shortname(short_name)
     if not current_user.admin and not current_user.id in project.owners_ids:
         return abort(403)
