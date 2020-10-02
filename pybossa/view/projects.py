@@ -900,9 +900,10 @@ def presenter(short_name):
         user_id = None if current_user.is_anonymous else current_user.id
         user_ip = (anonymizer.ip(request.remote_addr or '127.0.0.1')
                    if current_user.is_anonymous else None)
-        if current_user.is_authenticated:	
-            user_id = current_user.id	
-            rank_and_score = cached_users.rank_and_score(user_id)	
+
+        if current_user.is_authenticated:
+            user_id = current_user.id
+            rank_and_score = cached_users.rank_and_score(user_id)
             current_user.rank = rank_and_score['rank']
         task = sched.new_task(project.id,
                               project.info.get('sched'),
@@ -982,10 +983,14 @@ def export(short_name, task_id):
     """Return a file with all the TaskRuns for a given Task"""
     # Check if the project exists
     project, owner, ps = project_by_shortname(short_name)
-    if current_user.is_authenticated:	
-        user_id = current_user.id	
-        rank_and_score = cached_users.rank_and_score(user_id)	
+
+    if current_user.is_authenticated and authority_check(current_user.id,project.id,'project','admin'):
+        user_id = current_user.id
+        rank_and_score = cached_users.rank_and_score(user_id)
         current_user.rank = rank_and_score['rank']
+    else:
+        raise abort(403)
+
     if project.needs_password():
         redirect_to_password = _check_if_redirect_to_password(project)
         if redirect_to_password:
@@ -1008,10 +1013,14 @@ def tasks(short_name):
     #restrict access
     project, owner, ps = project_by_shortname(short_name)
     title = project_title(project, "Tasks")
-    if current_user.is_authenticated:	
-        user_id = current_user.id	
-        rank_and_score = cached_users.rank_and_score(user_id)	
+
+    if current_user.is_authenticated and authority_check(current_user.id,project.id,'project','admin'):
+        user_id = current_user.id
+        rank_and_score = cached_users.rank_and_score(user_id)
         current_user.rank = rank_and_score['rank']
+    else:
+        raise abort(403)
+
     if project.needs_password():
         redirect_to_password = _check_if_redirect_to_password(project)
         if redirect_to_password:
@@ -1051,6 +1060,7 @@ def tasks_browse(short_name, page=1):
     project, owner, ps = project_by_shortname(short_name)
     title = project_title(project, "Tasks")
     pro = pro_features()
+
     if current_user.is_authenticated:	
         user_id = current_user.id	
         rank_and_score = cached_users.rank_and_score(user_id)	
@@ -1144,7 +1154,12 @@ def export_to(short_name):
     title = project_title(project, gettext("Export"))
     loading_text = gettext("Exporting data..., this may take a while")
     pro = pro_features()
-
+    if current_user.is_authenticated and authority_check(current_user.id,project.id,'project','admin'):
+        user_id = current_user.id
+        rank_and_score = cached_users.rank_and_score(user_id)
+        current_user.rank = rank_and_score['rank']
+    else:
+        raise abort(403)
     if project.needs_password():
         redirect_to_password = _check_if_redirect_to_password(project)
         if redirect_to_password:
