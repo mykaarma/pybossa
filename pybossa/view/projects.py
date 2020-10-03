@@ -63,7 +63,7 @@ from pybossa.forms.projects_view_forms import *
 from pybossa.forms.admin_view_forms import SearchForm
 from pybossa.importers import BulkImportException
 from pybossa.pro_features import ProFeatureHandler
-
+from pybossa.accessControl import authority_check
 from pybossa.core import (project_repo, user_repo, task_repo, blog_repo,
                           result_repo, webhook_repo, auditlog_repo)
 from pybossa.auditlogger import AuditLogger
