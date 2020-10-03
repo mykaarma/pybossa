@@ -1132,15 +1132,20 @@ def delete_tasks(short_name):
 
 @blueprint.route('/<short_name>/tasks/export')
 def export_to(short_name):
+    #export access restriction
+    
     """Export Tasks and TaskRuns in the given format"""
     project, owner, ps = project_by_shortname(short_name)
     supported_tables = ['task', 'task_run', 'result']
-    if (current_user.is_authenticated and authority_check(current_user.id,project.id,'project','admin')):
+
+    if current_user.is_authenticated and authority_check(current_user.id,project.id,'project','admin'):
         user_id = current_user.id
         rank_and_score = cached_users.rank_and_score(user_id)
         current_user.rank = rank_and_score['rank']
     else:
+        print("HEREEEEEEEEEEE")
         raise abort(403)
+
     title = project_title(project, gettext("Export"))
     loading_text = gettext("Exporting data..., this may take a while")
     pro = pro_features()
