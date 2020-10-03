@@ -976,10 +976,12 @@ def export(short_name, task_id):
     """Return a file with all the TaskRuns for a given Task"""
     # Check if the project exists
     project, owner, ps = project_by_shortname(short_name)
-    if current_user.is_authenticated:	
-        user_id = current_user.id	
-        rank_and_score = cached_users.rank_and_score(user_id)	
+    if current_user.is_authenticated and authority_check(current_user.id,project.id,'project','admin'):
+        user_id = current_user.id
+        rank_and_score = cached_users.rank_and_score(user_id)
         current_user.rank = rank_and_score['rank']
+    else:
+        raise abort(403)
     if project.needs_password():
         redirect_to_password = _check_if_redirect_to_password(project)
         if redirect_to_password:
