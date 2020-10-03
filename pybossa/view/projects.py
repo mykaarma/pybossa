@@ -215,11 +215,19 @@ def project_index(page, lookup, category, fallback, use_count, order_by=None,
 
     if current_app.config.get('HISTORICAL_CONTRIBUTIONS_AS_CATEGORY'):
         categories.insert(0, historical_contributions_cat)
+
+    authorized_projects=[]
+    if current_user.is_authenticated:
+        for i in range(len(projects)):
+            if(authority_check(current_user.id,projects[i]["id"],'project','read')):
+                authorized_projects.append(projects[i])
+    else:
+        raise abort(403)
     # Check if we have to add the section Featured to local nav
     if cached_projects.n_count('featured') > 0:
         categories.insert(0, featured_cat)
     template_args = {
-        "projects": projects,
+        "projects": authorized_projects,
         "title": gettext("Projects"),
         "pagination": pagination,
         "active_cat": active_cat,
@@ -817,6 +825,11 @@ def password_required(short_name):
 @blueprint.route('/<short_name>/task/<int:task_id>')
 def task_presenter(short_name, task_id):
     project, owner, ps = project_by_shortname(short_name)
+    if current_user.is_authenticated:	
+        if(not authority_check(current_user.id,project.id,'project','read')):	
+            raise abort(403)    	
+    else:	
+        raise abort(403)
     task = task_repo.get_task(id=task_id)
     if task is None:
         raise abort(404)
@@ -873,8 +886,17 @@ def task_presenter(short_name, task_id):
 @blueprint.route('/<short_name>/presenter')
 @blueprint.route('/<short_name>/newtask')
 def presenter(short_name):
-
+    if current_user.is_authenticated:	
+        project = project_repo.get_by_shortname(short_name)	
+        if(not authority_check(current_user.id,project.id,'project','read')):	
+            raise abort(403)    	
+    else:	
+        raise abort(403)
     def invite_new_volunteers(project, ps):
+        if current_user.is_authenticated:	
+            user_id = current_user.id	
+            rank_and_score = cached_users.rank_and_score(user_id)	
+            current_user.rank = rank_and_score['rank']
         user_id = None if current_user.is_anonymous else current_user.id
         user_ip = (anonymizer.ip(request.remote_addr or '127.0.0.1')
                    if current_user.is_anonymous else None)
@@ -954,7 +976,10 @@ def export(short_name, task_id):
     """Return a file with all the TaskRuns for a given Task"""
     # Check if the project exists
     project, owner, ps = project_by_shortname(short_name)
-
+    if current_user.is_authenticated:	
+        user_id = current_user.id	
+        rank_and_score = cached_users.rank_and_score(user_id)	
+        current_user.rank = rank_and_score['rank']
     if project.needs_password():
         redirect_to_password = _check_if_redirect_to_password(project)
         if redirect_to_password:
@@ -976,7 +1001,10 @@ def export(short_name, task_id):
 def tasks(short_name):
     project, owner, ps = project_by_shortname(short_name)
     title = project_title(project, "Tasks")
-
+    if current_user.is_authenticated:	
+        user_id = current_user.id	
+        rank_and_score = cached_users.rank_and_score(user_id)	
+        current_user.rank = rank_and_score['rank']
     if project.needs_password():
         redirect_to_password = _check_if_redirect_to_password(project)
         if redirect_to_password:
@@ -1015,7 +1043,10 @@ def tasks_browse(short_name, page=1):
     project, owner, ps = project_by_shortname(short_name)
     title = project_title(project, "Tasks")
     pro = pro_features()
-
+    if current_user.is_authenticated:	
+        user_id = current_user.id	
+        rank_and_score = cached_users.rank_and_score(user_id)	
+        current_user.rank = rank_and_score['rank']
     def respond():
         per_page = 10
         offset = (page - 1) * per_page
