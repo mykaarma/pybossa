@@ -976,7 +976,7 @@ def export(short_name, task_id):
     """Return a file with all the TaskRuns for a given Task"""
     # Check if the project exists
     project, owner, ps = project_by_shortname(short_name)
-    if current_user.is_authenticated and authority_check(current_user.id,project.id,'project','admin'):
+    if (current_user.is_authenticated and authority_check(current_user.id,project.id,'project','admin')):
         user_id = current_user.id
         rank_and_score = cached_users.rank_and_score(user_id)
         current_user.rank = rank_and_score['rank']
@@ -1135,7 +1135,7 @@ def export_to(short_name):
     """Export Tasks and TaskRuns in the given format"""
     project, owner, ps = project_by_shortname(short_name)
     supported_tables = ['task', 'task_run', 'result']
-    if current_user.is_authenticated and authority_check(current_user.id,project.id,'project','admin'):
+    if (current_user.is_authenticated and authority_check(current_user.id,project.id,'project','admin')):
         user_id = current_user.id
         rank_and_score = cached_users.rank_and_score(user_id)
         current_user.rank = rank_and_score['rank']
