@@ -1003,7 +1003,7 @@ def export(short_name, task_id):
 def tasks(short_name):
     project, owner, ps = project_by_shortname(short_name)
     title = project_title(project, "Tasks")
-    if current_user.is_authenticated and authority_check(current_user.id,project.id,'project','admin'):
+    if(current_user.is_authenticated and authority_check(current_user.id,project.id,'project','admin')):
         user_id = current_user.id
         rank_and_score = cached_users.rank_and_score(user_id)
         current_user.rank = rank_and_score['rank']
