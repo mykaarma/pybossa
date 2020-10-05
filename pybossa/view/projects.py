@@ -1130,7 +1130,7 @@ def delete_tasks(short_name):
         return redirect_content_type(url_for('.tasks', short_name=project.short_name))
 
 
-@blueprint.route('<short_name>/tasks/export')
+@blueprint.route('/<short_name>/tasks/export')
 def export_to(short_name):
     #export access restriction
     
