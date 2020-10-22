@@ -70,7 +70,7 @@ def create_app(run_as_server=True):
     setup_ldap(app)
     setup_external_services(app)
     setup_jinja(app)
-    setup_csrf_protection(app)
+    # setup_csrf_protection(app)
     setup_debug_toolbar(app)
     setup_jinja2_filters(app)
     setup_newsletter(app)
