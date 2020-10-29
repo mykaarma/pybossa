@@ -51,9 +51,9 @@ def home():
         data['historical_contributions'] = historical_projects
         rank_and_score = cached_users.rank_and_score(user_id)
         current_user.rank = rank_and_score['rank']
-    response = dict(template='/home/index.html', **data)
+    #response = dict(template='/home/index.html', **data)
     #return handle_content_type(response)
-    return redirect('/project/category/mkplaygames', code=302)
+    return redirect(url_for('projects.project_cat_index', category='mkplaygames'), code=302)
 
 
 @blueprint.route("about")
