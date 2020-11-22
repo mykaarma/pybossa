@@ -382,7 +382,7 @@ def setup_facebook_login(app):
                 and app.config.get('LDAP_HOST') is None):
             facebook.init_app(app)
             from pybossa.view.facebook import blueprint as facebook_bp
-            app.register_blueprint(facebook_bp, url_prefix=/facebook')
+            app.register_blueprint(facebook_bp, url_prefix='/facebook')
     except Exception as inst:  # pragma: no cover
         print(type(inst))
         print(inst.args)
