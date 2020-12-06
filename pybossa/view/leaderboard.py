@@ -31,7 +31,7 @@ def index(window=0):
     if current_user.is_authenticated:
         user_id = current_user.id
         rank_and_score = cached_users.rank_and_score(user_id)
-        current_user.rank = rank_and_score['rank']
+        current_user.rank = rank_and_score.get('rank')
     else:
         user_id = None
 
@@ -48,10 +48,10 @@ def index(window=0):
         underscore = info.find("_")    
         answer = info[underscore+1:]
         dept = info[:underscore]
-        if(current_user.info is None or current_user.info['container'] is None or current_user.info['container'].get(dept) is None or current_user.info['container'][dept] != answer):
+        if(current_user.info is None or current_user.info.get('container') is None or current_user.info.get('container').get(dept) is None or current_user.info.get('container').get(dept) != answer):
             return abort(401)
 
-    top_users = cached_users.get_leaderboard(current_app.config['LEADERBOARD'],
+    top_users = cached_users.get_leaderboard(current_app.config.get('LEADERBOARD'),
                                              user_id=user_id,
                                              window=window,
                                              info=info)
