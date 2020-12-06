@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with PYBOSSA.  If not, see <http://www.gnu.org/licenses/>.
 """Leaderboard view for PYBOSSA."""
-from flask import Blueprint, current_app, request, abort
+from flask import Blueprint, current_app, request, abort, redirect, url_for
 from flask_login import current_user
 from pybossa.cache import users as cached_users
 from pybossa.util import handle_content_type
@@ -44,7 +44,7 @@ def index(window=0):
 
     if info is not None:
         if leaderboards is None or info not in leaderboards:
-            return abort(404)
+            return redirect(url_for('leaderboard.index'))
         underscore = info.find("_")    
         answer = info[underscore+1:]
         dept = info[:underscore]
