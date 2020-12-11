@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with PYBOSSA.  If not, see <http://www.gnu.org/licenses/>.
 """Leaderboard view for PYBOSSA."""
-from flask import Blueprint, current_app, request, abort
+from flask import Blueprint, current_app, request, abort, redirect, url_for
 from flask_login import current_user
 from pybossa.cache import users as cached_users
 from pybossa.util import handle_content_type
@@ -31,7 +31,7 @@ def index(window=0):
     if current_user.is_authenticated:
         user_id = current_user.id
         rank_and_score = cached_users.rank_and_score(user_id)
-        current_user.rank = rank_and_score['rank']
+        current_user.rank = rank_and_score.get('rank')
     else:
         user_id = None
 
@@ -44,14 +44,14 @@ def index(window=0):
 
     if info is not None:
         if leaderboards is None or info not in leaderboards:
-            return abort(404)
+            return redirect(url_for('leaderboard.index'))
         underscore = info.find("_")    
         answer = info[underscore+1:]
         dept = info[:underscore]
-        if(current_user.info is None or current_user.info['container'] is None or current_user.info['container'].get(dept) is None or current_user.info['container'][dept] != answer):
+        if(current_user.info is None or current_user.info.get('container') is None or current_user.info.get('container').get(dept) is None or current_user.info.get('container').get(dept) != answer):
             return abort(401)
 
-    top_users = cached_users.get_leaderboard(current_app.config['LEADERBOARD'],
+    top_users = cached_users.get_leaderboard(current_app.config.get('LEADERBOARD'),
                                              user_id=user_id,
                                              window=window,
                                              info=info)
