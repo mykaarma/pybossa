@@ -411,7 +411,7 @@ def rank(projects, order_by=None, desc=False):
     if order_by:
         projects.sort(key=lambda x: x[str(order_by)], reverse=desc)
     else:
-        projects.sort(key=earned_points, reverse=True)
+        projects.sort(key=earned_points, reverse=desc)
     return projects
 
 
